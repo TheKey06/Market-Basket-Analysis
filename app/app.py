@@ -11,15 +11,17 @@ st.set_page_config(
     layout='wide'
 )
 
-st.subheader('Dashboard MBA - TRONEX')
+st.sidebar.title("📊 TRONEX")
 
 pg = st.navigation([
-    st.Page("pages/bajo.py"),
-    st.Page("pages/medio.py"),
-    st.Page("pages/alto.py"),
-    st.Page("pages/premium.py"),
-    st.Page("pages/vip_premium.py"),
-    st.Page("pages/outlier.py")
+    st.Page('pages/inicio.py', title='Global'),
+    st.Page("pages/bajo.py", title='Segmento Bajo'),
+    st.Page("pages/medio.py", title='Segmento Medio'),
+    st.Page("pages/alto.py", title='Segmento Alto'),
+    st.Page("pages/premium.py",title='Segmento premium'),
+    st.Page("pages/vip_premium.py", title='Segmento Vip Premium'),
+    st.Page("pages/outlier.py", title='Outliers'),
+    st.Page("pages/nuevos.py", title='Nuevos'),
 ])
 
 pg.run()

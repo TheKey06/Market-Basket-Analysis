@@ -12,34 +12,125 @@ pd.set_option('display.float_format', lambda x: f'{x:,.2f}')
 reglas_dir = Path(__file__).resolve().parents[2] / 'reglas'
 df = pd.read_parquet(reglas_dir / 'segmento_outlier' / 'Basket.parquet')
 df_reglas = pd.read_csv(reglas_dir / 'segmento_outlier' / 'reglas.csv', sep=';')
-
-df_dispersion = df.groupby('cliente').agg({
-    'ticket_promedio': 'mean'
-})
+df= df.rename(columns={'margen_promeido':'margen_promedio'})
 
 # Muestra de la segmentacion de clientes en este segmento
 st.markdown('#### clientes en este segmento')
 
 # Datos
-resumen = df.groupby('cliente')[['frecuencia', 'ticket_promedio', 'cl_value']].mean().reset_index(drop=False)
+resumen = df.groupby('cliente').agg(
+    nombre = ('nombrecliente', 'first'),
+    frecuencia = ('frecuencia','mean'),
+    ticket_promedio = ('ticket_promedio','mean'),
+    cl_value = ('cl_value','mean'),
+    linea_favorita = ('linea_favorita', 'first'),
+    marca_favorita = ('marca_favorita','unique'),
+    margen_promedio = ('margen_promedio','mean'),
+    productos = ('referencia', 'unique'),
+    cantidad =('cantidad','sum')
+).reset_index()
 
-resumen['cliente'] = resumen['cliente'].astype(object)
+resumen['cliente'] = resumen['cliente'].astype(str)
 
-fig, ax = plt.subplots(figsize=(10, 6))
+variables = ['frecuencia', 'ticket_promedio', 'cl_value', 'clientes']
+titulos = ['Frecuencia Promedio', 'Ticket Promedio', 'CL Value Promedio']
 
-x = resumen['cliente'].astype(str).tolist()
-y = resumen['frecuencia'].tolist()
 
-ax.bar(x, y)
+######### Primer Grafico
 
-ax.set_title("Frecuencia por cliente")
-ax.set_xlabel("Cliente")
-ax.set_ylabel("Frecuencia")
+# Crear subplots
+fig = make_subplots(
+    rows=1, cols=3,
+    subplot_titles=titulos,
+    horizontal_spacing=None
+)
+variables = ['frecuencia', 'ticket_promedio', 'cl_value']
+titulos = ['Frecuencia Promedio', 'Ticket Promedio', 'Customer Life Time Value']
 
-plt.xticks(rotation=45)
+for i, (var, titulo) in enumerate(zip(variables, titulos)):
+    fig.add_trace(
+        go.Bar(
+            x=resumen['cliente'],
+            y=resumen[var],
+            marker=dict(
+                line=dict(color='black', width=1)
+            ),
+            opacity=1,
+            text=[f'{v:,.0f}' for v in resumen[var]],
+            textposition='outside',
+            textfont=dict(size=12, family='Arial Black'),
+            showlegend=False
+        ),
+        row=1, col=i+1
+    )
 
-st.pyplot(fig)
+    # Configurar ejes de cada subplot
+    fig.update_xaxes(
+        title_text='Cliente',
+        title_font=dict(size=12),
+        row=1, col=i+1
+    )
+    fig.update_yaxes(
+        title_text=var,
+        title_font=dict(size=12),
+        separatethousands=True,
+        row=1, col=i+1
+    )
 
+# Configuración general
+fig.update_layout(
+    title=dict(
+        text='Comparación de clientes outliers',
+        font=dict(size=16, family='Arial Black'),
+        x=0.5,
+        xanchor='center'
+    ),
+    template='plotly_dark',
+    plot_bgcolor='rgba(0,0,0,0)',
+    paper_bgcolor='rgba(0,0,0,0)'
+)
+st.plotly_chart(fig, width='stretch')
+
+
+####### Segundo grafico
+
+# marca favoritas
+
+marcas = df.groupby('marca_favorita')['marca_favorita'].value_counts().reset_index()
+fig2 = px.pie(marcas, values='count', names='marca_favorita')
+
+st.markdown('### Marcas vendidas en el segmento')
+st.plotly_chart(fig2,use_container_width=True)
+
+
+
+## Filtro por cliente
+nombres = resumen['cliente'].astype(str) + ' - ' + resumen['nombre']
+
+metrica = st.selectbox(
+    'Selecciona el cliente:',
+    nombres
+)
+
+# Extraer el código del cliente desde la selección
+cliente_seleccionado = metrica.split(' - ')[0].strip()
+
+# Filtrar el dataframe por ese cliente
+df_filtrado = df[df['cliente'].astype(str) == cliente_seleccionado]
+
+# Gráfico de referencias (productos)
+referencias = df_filtrado.groupby('referencia')['cantidad'].sum().reset_index()
+fig3 = px.bar(
+    referencias,
+    y='referencia',
+    x='cantidad',
+    orientation='h',
+    title='Referencias compradas por el cliente'
+)
+
+st.plotly_chart(fig3, use_container_width=True)
+
+col1,col2 = st.columns([2,1.5])
 
 
 ## Algoritmo apriori
