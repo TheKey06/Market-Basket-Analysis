@@ -97,40 +97,99 @@ fig.update_layout(
 st.plotly_chart(fig, use_container_width=True)
 
 array_titulos = resumen['nombre_cluster'].to_numpy()
-array_titulos = np.append(array_titulos,'Completo')
+array_titulos = np.append(array_titulos, 'Completo')
 
-print(array_titulos)
-metrica = st.selectbox(
+titulos = st.selectbox(
     'Selecciona el segmento:',
     array_titulos
 )
-if metrica in ['Completo']:
-    lineas = df.groupby('linea_favorita')['linea_favorita'].value_counts().reset_index()
-    fig1 = px.pie(lineas, values='count', names='linea_favorita')
-    marcas = df.groupby('marca_favorita')['marca_favorita'].value_counts().reset_index()
-    fig2 = px.pie(marcas, values='count', names='marca_favorita')
 
-elif metrica in ['Estrella']:
-    
-    lineas = df[df['nombre_cluster']=='Estrella'].groupby('linea_favorita')['linea_favorita'].value_counts().reset_index()
-    fig1 = px.pie(lineas, values='count', names='linea_favorita')
-    marcas = df[df['nombre_cluster']=='Estrella'].groupby('marca_favorita')['marca_favorita'].value_counts().reset_index()
-    fig2 = px.pie(marcas, values='count', names='marca_favorita')
-    
-elif metrica in ['Básico']:
-    
-    lineas = df[df['nombre_cluster']=='Básico'].groupby('linea_favorita')['linea_favorita'].value_counts().reset_index()
-    fig1 = px.pie(lineas, values='count', names='linea_favorita')
-    marcas = df[df['nombre_cluster']=='Básico'].groupby('marca_favorita')['marca_favorita'].value_counts().reset_index()
-    fig2 = px.pie(marcas, values='count', names='marca_favorita')
-    
-elif metrica in ['Esporádico Valioso']:
-    lineas = df[df['nombre_cluster']=='Esporádico Valioso'].groupby('linea_favorita')['linea_favorita'].value_counts().reset_index()
-    fig1 = px.pie(lineas, values='count', names='linea_favorita')
-    marcas = df[df['nombre_cluster']=='Esporádico Valioso'].groupby('marca_favorita')['marca_favorita'].value_counts().reset_index()
-    fig2 = px.pie(marcas, values='count', names='marca_favorita')
+if titulos == 'Completo':
+    df_filtrado = df.copy()  # Todos los datos
+else:
+    df_filtrado = df[df['nombre_cluster'] == titulos]  # Solo el segmento elegido
 
-col1,col2 = st.columns([2,1.5])
+# ---- Contar las líneas y marcas ----
+# value_counts() ya agrupa y cuenta, no necesitas groupby antes
+lineas = (
+    df_filtrado['linea_favorita']
+    .value_counts()
+    .reset_index()
+)
+lineas.columns = ['linea_favorita', 'count']
+
+marcas = (
+    df_filtrado['marca_favorita']
+    .value_counts()
+    .reset_index()
+)
+marcas.columns = ['marca_favorita', 'count']
+
+# ---- Calcular el porcentaje para mostrarlo en las barras ----
+lineas['porcentaje'] = (lineas['count'] / lineas['count'].sum() * 100).round(2)
+marcas['porcentaje'] = (marcas['count'] / marcas['count'].sum() * 100).round(2)
+
+# ---- Ordenar de menor a mayor (para que la barra más grande quede arriba) ----
+lineas = lineas.sort_values('count', ascending=True)
+marcas = marcas.sort_values('count', ascending=True)
+
+# ---- Gráfico de Barras Horizontales: LÍNEAS ----
+fig1 = px.bar(
+    lineas,
+    x='count',
+    y='linea_favorita',
+    orientation='h',                          # Horizontal
+    text=lineas['porcentaje'].apply(lambda x: f"{x}%"),  # Etiqueta con %
+    title=f'Líneas vendidas en el segmento: {titulos}',
+    labels={'count': 'Cantidad', 'linea_favorita': 'Línea'},
+    color='count',
+    color_continuous_scale='Reds'             # Escala de azules
+)
+
+fig1.update_traces(
+    textposition='outside',                   # Texto fuera de la barra
+    textfont=dict(size=12)
+)
+
+fig1.update_layout(
+    template='plotly_dark',
+    height=400 + (len(lineas) * 25),          # Altura dinámica según categorías
+    showlegend=False,
+    coloraxis_showscale=False,                # Ocultar barra de color
+    xaxis=dict(title='Cantidad'),
+    yaxis=dict(title=''),
+    margin=dict(l=10, r=80)
+)
+
+# ---- Gráfico de Barras Horizontales: MARCAS ----
+fig2 = px.bar(
+    marcas,
+    x='count',
+    y='marca_favorita',
+    orientation='h',
+    text=marcas['porcentaje'].apply(lambda x: f"{x}%"),
+    title=f'Marcas vendidas en el segmento: {titulos}',
+    labels={'count': 'Cantidad', 'marca_favorita': 'Marca'},
+    color='count',
+    color_continuous_scale='Blues'           # Escala de verdes para diferenciar
+)
+
+fig2.update_traces(
+    textposition='outside',
+    textfont=dict(size=12)
+)
+
+fig2.update_layout(
+    template='plotly_dark',
+    height=400 + (len(marcas) * 25),
+    showlegend=False,
+    coloraxis_showscale=False,
+    xaxis=dict(title='Cantidad'),
+    yaxis=dict(title=''),
+    margin=dict(l=10, r=80)
+)
+
+col1,col2 = st.columns([3,3])
 with col1:
     st.markdown('### Marcas vendidas en el segmento')
     st.plotly_chart(fig2,use_container_width=True)
