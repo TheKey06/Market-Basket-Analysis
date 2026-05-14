@@ -14,7 +14,7 @@ st.set_page_config(
 st.sidebar.title("📊 TRONEX")
 
 pg = st.navigation([
-    st.Page('pages/inicio.py', title='Global'),
+    st.Page('pages/inicio.py', title='General'),
     st.Page("pages/bajo.py", title='Segmento Bajo'),
     st.Page("pages/medio.py", title='Segmento Medio'),
     st.Page("pages/alto.py", title='Segmento Alto'),
