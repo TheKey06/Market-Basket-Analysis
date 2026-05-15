@@ -134,7 +134,7 @@ col1,col2 = st.columns([2,1.5])
 
 
 ## Algoritmo apriori
-
+st.markdown('## Relacion de productos')
 # Crear combinaciones
 df_reglas['antecedents_clean'] = df_reglas['antecedents'].str.replace(
     "frozenset\(\{|'\}?\)", "", regex=True

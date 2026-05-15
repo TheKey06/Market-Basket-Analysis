@@ -46,6 +46,8 @@ with col2:
     st.markdown('### Marcas vendidas')
     st.plotly_chart(fig2,use_container_width=True)
 
+
+st.markdown('## Relacion de productos')
 df_reglas['antecedents_clean'] = df_reglas['antecedents'].str.replace(
     "frozenset\(\{|'\}?\)", "", regex=True
 ).str.replace("'", "")

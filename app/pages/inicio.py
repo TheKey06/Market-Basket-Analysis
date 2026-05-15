@@ -5,9 +5,13 @@ import plotly.express as px
 import plotly.graph_objects as go
 from pathlib import Path
 import os
+import sys
+
 pd.set_option('display.float_format', lambda x: f'{x:,.2f}')
 
 print(os.getcwd())
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+from helpers.scripts import comportamiento_marca
 
 df_reglas= pd.read_csv('../reglas/general.csv')
 df_general = pd.read_parquet('../raw/Antioquia.parquet')
@@ -34,7 +38,7 @@ metricas = st.selectbox(
     marcas
 )
 
-col1,col2,col3,col4 = st.columns([1,1,1,1])
+col1,col2,col3 = st.columns([1,1,1])
 # Filtrar según la selección
 if metricas == 'General':
     # Agrupar todo sin filtrar por marca, pero separando por línea
@@ -52,9 +56,13 @@ if metricas == 'General':
         label='Promedio de margen mensual',
         value=f"${df_mensual['margenpesos'].mean():,.0f}"
         )
-        
-
-              
+    with col3:
+        with st.container(border=True):
+            st.metric(
+                label='Porcentaje de margen promedio',
+                value=f'{((df_mensual['margenpesos'].mean()/df_mensual['montoventapesos'].mean())*100):,.0f}%'
+            )
+                   
     df_filtrado = df_mensual.groupby(['lineatat', 'fechafactura']).agg({
         'montoventapesos': 'sum',
         'cantidad': 'sum',
@@ -63,13 +71,17 @@ if metricas == 'General':
     }).reset_index()
     
     df_pie =df_general.groupby('lineatat')['cantidad'].sum().reset_index()
-    fig2 = px.pie(df_pie, values='cantidad',names='lineatat')
+    fig2 = px.pie(df_pie, values='cantidad',names='lineatat', color_discrete_sequence=px.colors.diverging.RdYlGn)
+    
+    df_pie_marcas =df_general.groupby('tro_e_marca')['cantidad'].sum().reset_index()
+    fig3 = px.pie(df_pie_marcas, values='cantidad',names='tro_e_marca', color_discrete_sequence=px.colors.diverging.RdYlGn)
     
     fig = px.line(
         df_filtrado,
         x='fechafactura',
         y='montoventapesos',
         color='lineatat',
+        color_discrete_sequence=px.colors.diverging.RdYlGn,
         title='Ventas por Línea - Todas las Marcas',
         labels={
             'fechafactura': 'Fecha',
@@ -82,16 +94,42 @@ if metricas == 'General':
     hovertemplate='<b>%{fullData.name}</b><br>' +
                   'Fecha: %{x|%b %Y}<br>' +
                   'Monto Ventas: $%{y:,.0f}<extra></extra>'
-)
+                    )
+    
+    #Referencias mas vendidas#
+    df_referencias = df_general.groupby('referencia')['montoventapesos'].sum().reset_index().sort_values(by='montoventapesos', ascending=False).head(10)
+    traza = go.Bar(
+        x=df_referencias['referencia'],
+        y=df_referencias['montoventapesos'],
+        marker=dict(
+            color=px.colors.diverging.RdYlGn,
+            line=dict(color='black', width=1)
+        ),
+        opacity=0.85,
+            # Formato limpio: solo el valor, sin índice ni nombre
+        text=[f'${v:,.0f}' for v in df_referencias['montoventapesos']],
+        textposition='outside',
+        textfont=dict(size=10, family='Arial Black'),
+        showlegend=False
+        )
+
+    # Creas la figura (el plato completo) y le metes la traza
+    figBar = go.Figure(data=[traza])
+
+    # Opcional: personalizar el layout
+    figBar.update_layout(
+        title="Top Referencias por Ventas",
+        xaxis_title="Referencia",
+        yaxis_title="Monto Venta (Pesos)"
+    )
 
 
 else:
-    
     # Filtrar por la marca seleccionada
     df_filtrado = df_mensual[df_mensual['tro_e_marca'] == metricas]
     # Grafica de paster
     df_pie = df_general[df_general['tro_e_marca']==metricas].groupby('lineatat')['cantidad'].sum().reset_index()
-    fig2 = px.pie(df_pie, values='cantidad',names='lineatat')
+    fig2 = px.pie(df_pie, values='cantidad',names='lineatat',color_discrete_sequence=px.colors.diverging.RdYlGn)
     with col1:
         with st.container(border=True):
             st.metric(
@@ -104,6 +142,12 @@ else:
         label='Promedio de margen mensual',
         value=f"${df_mensual[df_mensual['tro_e_marca']==metricas]['margenpesos'].mean():,.0f}"
         )
+    with col3:
+        with st.container(border=True):
+                st.metric(
+                    label='Porcentaje de margen promedio',
+                    value=f'{((df_mensual[df_mensual['tro_e_marca']==metricas]['margenpesos'].mean()/df_mensual[df_mensual['tro_e_marca']==metricas]['montoventapesos'].mean())*100):,.0f}%'
+                )
     
     # Grafica de lineas
     fig = px.line(
@@ -111,6 +155,7 @@ else:
         x='fechafactura',
         y='montoventapesos',
         color='lineatat',
+        color_discrete_sequence=px.colors.diverging.RdYlGn,
         title=f'Ventas por Línea - {metricas}',
         labels={
             'fechafactura': 'Fecha',
@@ -118,13 +163,39 @@ else:
             'lineatat': 'Líneas'
         },
         markers=True
+        
     )
     fig.update_traces(
     hovertemplate='<b>%{fullData.name}</b><br>' +
                   'Fecha: %{x|%b %Y}<br>' +
                   'Monto Ventas: $%{y:,.0f}<extra></extra>'
-)
+    )
+    
+    #Referencias mas vendidas#
+    df_referencias = df_general[df_general['tro_e_marca']==metricas].groupby('referencia')['montoventapesos'].sum().reset_index().sort_values(by='montoventapesos', ascending=False).head(10)
+    traza = go.Bar(
+        x=df_referencias['referencia'],
+        y=df_referencias['montoventapesos'],
+        marker=dict(
+            color=px.colors.diverging.RdYlGn,
+            line=dict(color='black', width=1)
+        ),
+        opacity=0.85,
+            # Formato limpio: solo el valor, sin índice ni nombre
+        text=[f'${v:,.0f}' for v in df_referencias['montoventapesos']],
+        textposition='outside',
+        textfont=dict(size=10, family='Arial Black'),
+        showlegend=False
 
+    )
+    figBar = go.Figure(data=[traza])
+
+    # Opcional: personalizar el layout
+    figBar.update_layout(
+        title="Top Referencias por Ventas",
+        xaxis_title="Referencia",
+        yaxis_title="Monto Venta (Pesos)"
+    )
 
 fig.update_layout(
     template='plotly_dark',
@@ -146,12 +217,20 @@ fig.update_xaxes(
 )
 
 
-col1,col2 = st.columns([1.2,2])
+col1,col2 = st.columns([2.5,2])
 with col1:
-    st.plotly_chart(fig2, use_container_width=True)
     
-with col2:
     st.plotly_chart(fig, use_container_width=True)
+with col2:
+    
+    st.plotly_chart(fig2, use_container_width=True)
+    # st.plotly_chart(df_pie_marcas, use_container_width=True)
+
+## Grafica de referencias
+st.plotly_chart(figBar, use_container_width=True)
+
+
+
 
 
 df_reglas['antecedents_clean'] = df_reglas['antecedents'].str.replace(
@@ -214,5 +293,11 @@ fig.update_layout(
 )
 
 st.plotly_chart(fig, use_container_width=True)
+
+# df_marca = df_general[df_general['tro_e_marca']=='TRONEX']
+
+# fig_radar = comportamiento_marca(df_marca)
+
+# st.plotly_chart(fig, use_container_width=True)
 
 

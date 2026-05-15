@@ -96,6 +96,7 @@ fig.update_layout(
 )
 st.plotly_chart(fig, use_container_width=True)
 
+
 # ---- Selectbox de segmentos ----
 array_titulos = resumen['nombre_cluster'].to_numpy()
 array_titulos = np.append(array_titulos, 'Completo')
@@ -148,7 +149,7 @@ fig1 = px.bar(
     title=f'Líneas vendidas en el segmento: {titulos}',
     labels={'count': 'Cantidad', 'linea_favorita': 'Línea'},
     color='count',
-    color_continuous_scale='Reds'             # Escala de azules
+    color_discrete_sequence=px.colors.diverging.RdYlGn
 )
 
 fig1.update_traces(
@@ -203,6 +204,9 @@ with col2:
     st.plotly_chart(fig1)
 ## Algoritmo apriori
 
+
+
+st.markdown('## Relacion de productos')
 # Crear combinaciones
 # ---- Limpiar datos ----
 df_reglas['antecedents_clean'] = df_reglas['antecedents'].str.replace(

@@ -196,6 +196,8 @@ with col1:
 with col2:
     st.markdown('### Lineas vendidas en el segmento')
     st.plotly_chart(fig1)
+    
+st.markdown('## Relacion de productos')
 ## Algoritmo apriori
 
 # Crear combinaciones

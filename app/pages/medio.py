@@ -196,8 +196,11 @@ with col1:
 with col2:
     st.markdown('### Lineas vendidas en el segmento')
     st.plotly_chart(fig1)
+    
+    
+    
 ## Algoritmo apriori
-
+st.markdown('## Relacion de productos')
 # Crear combinaciones
 df_reglas['antecedents_clean'] = df_reglas['antecedents'].str.replace(
     "frozenset\(\{|'\}?\)", "", regex=True
